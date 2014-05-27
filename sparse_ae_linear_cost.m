@@ -5,8 +5,8 @@
 % autoencoder whose output layer activation function is the identity,
 % rather than the sigmoid function).
 
-function [cost, grad] = sparseAutoencoderLinearCost(theta, ...
-    visible_size, hidden_size, lambda, sparsity_target, beta, data)
+function [cost, grad] = sparse_ae_linear_cost(theta, visible_size, hidden_size, ...
+    lambda, sparse_reg_param, sparse_target, data)
 
     % Convert from vector format (needed by minFunc()).
     W1 = reshape(theta(1 : hidden_size * visible_size), hidden_size, visible_size);
@@ -33,21 +33,21 @@ function [cost, grad] = sparseAutoencoderLinearCost(theta, ...
     mean_act_hidden = mean(act_hidden, 2);
 
     % Sparsity-enforcing term, the KL divergence between Bernoulli random
-    % variables with means of sparsity_target and the observed average
+    % variables with means of sparse_target and the observed average
     % activation of the hidden units.
-    sparsity_enforce = sparsity_target * (hidden_size * log(sparsity_target) - sum(log(mean_act_hidden))) + ...
-        (1 - sparsity_target) * (hidden_size * log(1 - sparsity_target) - sum(log(1 - mean_act_hidden)));
+    sparsity_enforce = sparse_target * (hidden_size * log(sparse_target) - sum(log(mean_act_hidden))) + ...
+        (1 - sparse_target) * (hidden_size * log(1 - sparse_target) - sum(log(1 - mean_act_hidden)));
 
-    cost = loss + reg + beta * sparsity_enforce;
+    cost = loss + reg + sparse_reg_param * sparsity_enforce;
 
     % Compute term in delta_hidden from sparsity enforcement term.
-    sparsity_term = repmat((-sparsity_target ./ mean_act_hidden) + ...
-        (1 - sparsity_target) ./ (1 - mean_act_hidden), 1, num_train);
+    sparsity_term = repmat((-sparse_target ./ mean_act_hidden) + ...
+        (1 - sparse_target) ./ (1 - mean_act_hidden), 1, num_train);
 
     % Backward propagation. First compute the "error terms" describing how much each
     % unit contributes to the loss (delta in the lecture notes).
     delta_visible = act_visible - data;
-    delta_hidden = (W2' * delta_visible + beta * sparsity_term) .* act_hidden .* (1 - act_hidden);
+    delta_hidden = (W2' * delta_visible + sparse_reg_param * sparsity_term) .* act_hidden .* (1 - act_hidden);
 
     % Compute the gradients of the loss term.
     W1_loss_grad = (delta_hidden * data') / num_train;
@@ -61,15 +61,5 @@ function [cost, grad] = sparseAutoencoderLinearCost(theta, ...
 
     % Convert to vector format for minFunc().
     grad = [W1_grad(:) ; W2_grad(:) ; b1_grad(:) ; b2_grad(:)];
-    
-end
-
-% Function: sigmoid()
-% -------------------
-% Implements the sigmoid function element-wise.
-
-function sigm = sigmoid(x)
-
-    sigm = 1 ./ (1 + exp(-x));
     
 end
